@@ -1,0 +1,27 @@
+-r ./base.txt
+autoflake==2.3.1
+django-debug-toolbar==5.0.1
+django-extra-checks==0.16.1
+django-migration-linter==5.1.0
+django-querycount~=0.8.3
+django-schema-graph==3.1.0
+django-test-migrations==1.4.0
+dotenv-linter==0.6.0
+# drf-yasg==1.21.10
+flake8==6.1.0
+flake8-bugbear==24.12.12
+flake8-builtins==2.5.0
+flake8-django==1.4
+flake8-docstrings==1.7.0
+flake8-isort==6.1.2
+flake8-print==5.0.0
+flake8-quotes==3.4.0
+flake8-simplify==0.21.0
+pep8-naming==0.13.3
+polint==0.4
+pre-commit==4.1.0
+pytest==7.3.1
+pytest-django==4.10.0
+pyupgrade==3.19.1
+safety==3.3.1
+yamllint==1.36.0

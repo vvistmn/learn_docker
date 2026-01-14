@@ -1,0 +1,4 @@
+---
+include:
+  - docker/composes/compose.db.yml
+  - docker/composes/compose.app.yml

@@ -1,0 +1,128 @@
+---
+secrets:
+  pip:
+    file: $HOME/.config/pip/pip.conf
+
+# Переменные среды определяются отдельно т.к. YAML merge не работает с последовательностями
+x-environment: &default-environment
+  DJANGO_DATABASE_HOST: "db"
+  REDIS_HOST: "redis"
+  REDIS_URL: "redis://:pass@redis:6379/0"
+  CELERY_BROKER_URL: "redis://:pass@redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://:pass@redis:6379/1"
+
+x-app: &default-app
+  image: registry.it-thematic.ru/vi-learn-docker/vi-learn-docker:dev
+  init: true
+  build:
+    target: entrypoint_build
+    context: ../..
+    dockerfile: ./docker/django/Dockerfile
+    cache_from:
+      - type=registry,ref=registry.it-thematic.ru/vi-learn-docker/vi-learn-docker:cache
+      - type=registry.it-thematic.ru/vi-learn-docker/vi-learn-docker:develop
+    cache_to:
+      - type=registry,ref=registry.it-thematic.ru/vi-learn-docker/vi-learn-docker:cache,mode=max
+    secrets:
+      - pip
+  restart: always
+  depends_on:
+    - db
+    - redis
+  networks:
+    - webnet
+  env_file: ../../.env
+  environment:
+    <<: *default-environment
+  deploy:
+    replicas: 1
+    resources:
+      limits:
+        cpus: "0.2"
+        memory: "256MB"
+      reservations:
+        cpus: "0.1"
+        memory: "64MB"
+    update_config:
+      parallelism: 1
+      order: start-first
+      failure_action: rollback
+      delay: 10s
+    rollback_config:
+      parallelism: 1
+      order: stop-first
+    restart_policy:
+      condition: on-failure
+      delay: 10s
+      max_attempts: 3
+      window: 60s
+
+
+services:
+  migration:
+    <<: *default-app
+    restart: "no"
+    command: "python manage.py migrate --no-input"
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+
+  web:
+    <<: *default-app
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+    volumes:
+      - django_static:/usr/share/nginx/django/static
+
+  compile_message:
+    <<: *default-app
+    restart: "no"
+    command: "python manage.py compilemessages -l ru"
+    depends_on:
+      web:
+        condition: service_healthy
+
+
+  worker:
+    <<: *default-app
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      <<: *default-environment
+    command: "celery -A config worker"
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping --destination worker@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  flower:
+    <<: *default-app
+    environment:
+      <<: *default-environment
+    command: "celery -A config flower"
+
+# This task is an example of how to extend existing ones:
+#   some_worker:
+#     <<: *default-app
+#     command: python manage.py worker_process
+# OR
+#   some_worker:
+#     <<: *default-app
+#     command: celery -A config worker -l INFO
+
+
+networks:
+  webnet:
+
+
+volumes:
+  django_static:
+    name: "vi-learn-docker_static"

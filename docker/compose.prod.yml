@@ -1,0 +1,50 @@
+---
+services:
+  nginx:
+    image: nginx:1.20-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/templates:/etc/nginx/templates
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - django-static:/usr/share/nginx/django/static:ro
+      - django-media:/usr/share/nginx/django/media:ro
+    depends_on:
+      - web
+    networks:
+      - webnet
+    environment:
+      NGINX_PORT: 443
+      NGINX_SERVER_NAME: localhost
+
+  web:
+    restart: unless-stopped
+    image: registry.it-thematic.ru/vi-learn-docker/vi-learn-docker:prod
+    build:
+      target: production_build
+      args:
+        DJANGO_ENV: production
+    command: sh ./docker/django/uwsgi.sh
+    networks:
+      - webnet
+    volumes:
+      - django-static:/usr/share/nginx/django/static
+      - django-media:/usr/share/nginx/django/media
+      - django-locale:/usr/src/app/locale
+
+
+# This task is an example of how to extend existing ones:
+#   some_worker:
+#     command: python manage.py worker_process
+#     deploy:
+#       replicas: 2
+
+volumes:
+  django_static:
+    name: "vi-learn-docker_static"
+  django-media:
+    name: "vi-learn-docker_media"
+  django-locale:
+    name: "vi-learn-docker_locale"

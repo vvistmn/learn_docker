@@ -1,0 +1,41 @@
+---
+default:
+  tags:
+    - docker-runner
+
+stages:
+  - .pre:build
+  - .pre:check
+  - build
+  - test
+  - release
+  - deploy
+  - .post
+
+include:
+  - project: "itt/gitlab-ci-templates"
+    file: "common/pre-build-base-image.gitlab-ci.yml"
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+  - project: "itt/gitlab-ci-templates"
+    file: "common/pre-commit.gitlab-ci.yml"
+  - project: "itt/gitlab-ci-templates"
+    file: "common/semantic-release.gitlab-ci.yml"
+  - project: "itt/gitlab-ci-templates"
+    file: "common/notification.gitlab-ci.yml"
+  - project: "itt/gitlab-ci-templates"
+    file: "common/prune_images.gitlab-ci.yaml"
+
+variables:
+  IMAGE_NAME: "$DOCKER_REGISTRY/$CI_PROJECT_PATH"
+
+pre-build-base-dev-images:
+  extends: ".pre-build-base-django-image"
+
+pre-commit:
+  stage: .pre:check
+  extends: ".pre-commit"
+  variables:
+    IMAGE_NAME: "$DOCKER_REGISTRY/$CI_PROJECT_PATH"
+  image:
+    name: $IMAGE_NAME:pip
+    entrypoint: [""]

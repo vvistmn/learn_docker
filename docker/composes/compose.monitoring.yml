@@ -1,0 +1,27 @@
+---
+services:
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    networks:
+      - webnet
+    volumes:
+      - prometheus:/var/lib/prometheus/data
+
+  grafana:
+    image: grafana/grafana:11.6.0-ubuntu
+    networks:
+      - webnet
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana:/var/lib/grafana
+
+
+networks:
+  webnet:
+
+volumes:
+  prometheus:
+    name: "vi-learn-docker_prometheus"
+  grafana:
+    name: "vi-learn-docker_grafana"

@@ -1,0 +1,81 @@
+---
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - webnet
+    env_file: ../../.env
+    shm_size: 1G
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "2"
+          memory: "1GB"
+        reservations:
+          cpus: "0.05"
+          memory: "256MB"
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  redis:
+    image: redis:7.4.2-alpine
+    restart: unless-stopped
+    command: "redis-server --requirepass binance"
+    volumes:
+      - redis_data:/data
+    networks:
+      - webnet
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1"
+          memory: "128MB"
+        reservations:
+          cpus: "0.05"
+          memory: "64MB"
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 60s
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
+volumes:
+  pg_data:
+    name: "vi-learn-docker_pg_data"
+  redis_data:
+    name: "vi-learn-docker_redis_data"
